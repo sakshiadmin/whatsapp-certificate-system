@@ -1,0 +1,12 @@
+Put your custom .ttf font file here, e.g.: YourFont-Regular.ttf
+
+Then set in .env:
+  CERTIFICATE_FONT_PATH=fonts/YourFont-Regular.ttf
+  CERTIFICATE_FONT_NAME=YourFont   (any name you choose, used internally)
+
+Must be a TTF (TrueType) file. OTF is not supported by ReportLab's
+TTFont loader used in app/services/certificate_service.py. If your font is
+only available as .otf, convert it to .ttf first (e.g. using FontForge or
+an online converter) — do this once, locally, before deploying.
+
+Delete this placeholder file once your real font is here.

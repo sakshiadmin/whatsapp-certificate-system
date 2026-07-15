@@ -1,0 +1,11 @@
+Put your certificate template here as: certificate_template.pdf
+
+Requirements for the template file:
+- Single page PDF (only page 1 is used).
+- All static design (borders, logos, signatures, course name, footer text)
+  already drawn in — this file is never edited by the app.
+- Leave visible empty space where the student's name should appear; use
+  scripts/calibrate_certificate.py to find the exact X/Y coordinates once
+  this file is in place.
+
+Delete this placeholder file once certificate_template.pdf is here.
