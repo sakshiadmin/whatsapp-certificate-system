@@ -93,9 +93,17 @@ class SheetsService:
         if self._worksheet is not None:
             return self._worksheet
 
-        creds = Credentials.from_service_account_file(
-            self._settings.google_service_account_file, scopes=SCOPES
-        )
+        import os
+        import json
+
+        if "GOOGLE_SERVICE_ACCOUNT_JSON" in os.environ:
+            creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+            creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+        else:
+            creds = Credentials.from_service_account_file(
+                self._settings.google_service_account_file, scopes=SCOPES
+            )
+            
         self._client = gspread.authorize(creds)
         spreadsheet = self._client.open_by_key(self._settings.google_sheet_id)
         self._worksheet = spreadsheet.worksheet(

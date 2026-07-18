@@ -54,9 +54,15 @@ class StorageService:
         tests can swap in a FakeStorageService without needing a real
         service-account JSON file on disk."""
         if self._service is None:
-            creds = Credentials.from_service_account_file(
-                self._settings.google_service_account_file, scopes=SCOPES
-            )
+            import os
+            import json
+            if "GOOGLE_SERVICE_ACCOUNT_JSON" in os.environ:
+                creds_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+                creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+            else:
+                creds = Credentials.from_service_account_file(
+                    self._settings.google_service_account_file, scopes=SCOPES
+                )
             self._service = build(
                 "drive", "v3", credentials=creds, cache_discovery=False
             )
