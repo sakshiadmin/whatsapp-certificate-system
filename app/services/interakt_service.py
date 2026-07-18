@@ -117,8 +117,8 @@ class InteraktService:
             "callbackData": certificate_id,
             "type": "Document",
             "data": {
-                "url": certificate_url,
-                "caption": self._settings.certificate_message.format(
+                "mediaUrl": certificate_url,
+                "message": self._settings.certificate_message.format(
                     name=student_name
                 ),
                 "filename": f"{certificate_id}.pdf",
