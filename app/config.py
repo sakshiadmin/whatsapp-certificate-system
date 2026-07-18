@@ -62,7 +62,9 @@ class Settings(BaseSettings):
     )
 
     # ---- Google Sheets ----------------------------------------------------
-    google_service_account_file: str = Field(alias="GOOGLE_SERVICE_ACCOUNT_FILE")
+    google_service_account_file: str = Field(
+        default="secrets/service-account.json", alias="GOOGLE_SERVICE_ACCOUNT_FILE"
+    )
     google_sheet_id: str = Field(alias="GOOGLE_SHEET_ID")
     google_sheet_worksheet_name: str = Field(
         default="Students", alias="GOOGLE_SHEET_WORKSHEET_NAME"
