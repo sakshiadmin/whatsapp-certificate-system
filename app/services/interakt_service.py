@@ -118,7 +118,7 @@ class InteraktService:
             "type": "Document",
             "data": {
                 "mediaUrl": certificate_url,
-                "message": self._settings.certificate_message.format(
+                "caption": self._settings.certificate_message.format(
                     name=student_name
                 ),
                 "filename": f"{certificate_id}.pdf",
