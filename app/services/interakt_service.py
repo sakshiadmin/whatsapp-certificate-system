@@ -110,21 +110,19 @@ class InteraktService:
         """Send the certificate PDF as a session document message."""
         country_code, phone_number = self._split_phone(full_phone_digits)
 
-        # First, send the document (certificate PDF).
-        doc_payload = {
+        message_text = self._settings.certificate_message.format(name=student_name)
+        message_text += f"\n\nDownload your certificate here: {certificate_url}"
+
+        payload = {
             "countryCode": country_code,
             "phoneNumber": phone_number,
             "callbackData": certificate_id,
-            "type": "Document",
+            "type": "Text",
             "data": {
-                "mediaUrl": certificate_url,
-                # "caption": self._settings.certificate_message.format(
-                #     name=student_name
-                # ),
-                "filename": f"{certificate_id}.pdf",
+                "message": message_text,
             },
         }
-        result = await self._post_message(doc_payload)
+        result = await self._post_message(payload)
         logger.info(
             "certificate_message_sent",
             phone=full_phone_digits,
