@@ -6,23 +6,22 @@ already configured for Google Sheets (secrets/service-account.json), so there
 is zero additional credential setup.
 
 How it works:
-  1. Upload the certificate PDF to a folder in the service account's Drive.
+  1. Upload the certificate PDF to a Shared Drive folder.
   2. Set the file's permission to "anyone with the link can view" — this makes
      the file publicly downloadable (same security model as R2: public URL,
      unguessable file ID).
   3. Return the direct download URL for WhatsApp/Interakt to fetch.
 
 Why Google Drive instead of R2:
-  - Free: 15 GB per Google account, certificates are ~100–200 KB each, so
-    you can store ~75,000–150,000 certificates before hitting limits.
+  - Free: uses Shared Drive storage (not tied to any individual quota).
   - No extra credentials: reuses the service account already set up for Sheets.
   - No extra infrastructure: no S3 client, no bucket config, no public access
     domain setup.
 
 Folder management:
-  - If GOOGLE_DRIVE_FOLDER_ID is set in .env, files go into that folder.
-  - Otherwise, the service creates a "Certificates" folder in the service
-    account's own Drive on first upload and reuses it thereafter.
+  - GOOGLE_DRIVE_FOLDER_ID must be set to a folder (or Shared Drive root) that
+    the service account has been granted at least Content Manager access to.
+  - All API calls pass supportsAllDrives=True for Shared Drive compatibility.
 """
 
 from __future__ import annotations
@@ -39,7 +38,7 @@ from app.logging_config import get_logger
 logger = get_logger(__name__)
 
 SCOPES = [
-    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive",
 ]
 
 
@@ -81,7 +80,10 @@ class StorageService:
         )
         results = (
             self._get_service().files()
-            .list(q=query, spaces="drive", fields="files(id, name)", pageSize=1)
+            .list(
+                q=query, spaces="drive", fields="files(id, name)", pageSize=1,
+                supportsAllDrives=True, includeItemsFromAllDrives=True,
+            )
             .execute()
         )
         files = results.get("files", [])
@@ -97,7 +99,7 @@ class StorageService:
         }
         folder = (
             self._get_service().files()
-            .create(body=folder_metadata, fields="id")
+            .create(body=folder_metadata, fields="id", supportsAllDrives=True)
             .execute()
         )
         self._folder_id = folder["id"]
@@ -119,7 +121,10 @@ class StorageService:
             )
             uploaded = (
                 self._get_service().files()
-                .create(body=file_metadata, media_body=media, fields="id")
+                .create(
+                    body=file_metadata, media_body=media, fields="id",
+                    supportsAllDrives=True,
+                )
                 .execute()
             )
             file_id = uploaded["id"]
@@ -129,6 +134,7 @@ class StorageService:
                 fileId=file_id,
                 body={"type": "anyone", "role": "reader"},
                 fields="id",
+                supportsAllDrives=True,
             ).execute()
 
             # Direct download URL that WhatsApp can fetch.
