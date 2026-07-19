@@ -83,7 +83,7 @@ class Settings(BaseSettings):
         default="CertFont", alias="CERTIFICATE_FONT_NAME"
     )
     certificate_name_x: float = Field(default=300, alias="CERTIFICATE_NAME_X")
-    certificate_name_y: float = Field(default=350, alias="CERTIFICATE_NAME_Y")
+    certificate_name_y: float = Field(default=265, alias="CERTIFICATE_NAME_Y")
     certificate_name_font_size: float = Field(
         default=32, alias="CERTIFICATE_NAME_FONT_SIZE"
     )
