@@ -9,3 +9,5 @@ venv/
 .DS_Store
 sakshivenv/
 .env.example
+scripts/calibration_grid.pdf
+generate_local_certificate.py
