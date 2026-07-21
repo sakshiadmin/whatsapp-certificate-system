@@ -44,7 +44,6 @@ logger = get_logger(__name__)
 # mentions the word "certificate" in a sentence) to avoid accidental
 # triggers on unrelated chats.
 TRIGGER_PATTERN = re.compile(r"^\s*certificate\s*[!.?]*\s*$", re.IGNORECASE)
-START_TRIGGER_PATTERN = re.compile(r"^\s*let'?s\s+start\s*[!.?]*\s*$", re.IGNORECASE)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -122,7 +121,7 @@ async def interakt_webhook(
         logger.info("webhook_ignored_no_text_or_phone", webhook_type=payload.type)
         return {"status": "ignored"}
 
-    if START_TRIGGER_PATTERN.match(message_text):
+    if message_text.strip() == "Let's Start!":
         logger.info("start_request_received", phone=phone)
         await _handle_start_request(request.app, phone, name)
         return {"status": "processed"}
