@@ -44,7 +44,7 @@ logger = get_logger(__name__)
 # mentions the word "certificate" in a sentence) to avoid accidental
 # triggers on unrelated chats.
 TRIGGER_PATTERN = re.compile(r"^\s*certificate\s*[!.?]*\s*$", re.IGNORECASE)
-
+START_TRIGGER_PATTERN = re.compile(r"^\s*let'?s\s+start\s*[!.?]*\s*$", re.IGNORECASE)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -65,9 +65,9 @@ async def healthz():
     return {"status": "ok"}
 
 
-def _extract_text_and_phone(payload: InteraktWebhookPayload) -> tuple[str | None, str | None]:
+def _extract_text_phone_and_name(payload: InteraktWebhookPayload) -> tuple[str | None, str | None, str]:
     """
-    Defensive extraction of (message_text, phone_digits) from the webhook.
+    Defensive extraction of (message_text, phone_digits, name) from the webhook.
 
     Interakt's incoming-message webhook nests these under data.customer and
     data.message. This function is intentionally the ONLY place that reads
@@ -77,17 +77,19 @@ def _extract_text_and_phone(payload: InteraktWebhookPayload) -> tuple[str | None
     function to update.
     """
     if payload.data is None:
-        return None, None
+        return None, None, ""
 
     phone = None
+    name = ""
     if payload.data.customer is not None:
         phone = payload.data.customer.channel_phone_number
+        name = payload.data.customer.traits.get("name", "") if payload.data.customer.traits else ""
 
     text = None
     if payload.data.message is not None:
         text = payload.data.message.message
 
-    return text, phone
+    return text, phone, name
 
 
 @app.post("/webhooks/interakt")
@@ -114,11 +116,16 @@ async def interakt_webhook(
         # don't handle) should not cause Interakt to keep retrying forever.
         return JSONResponse(status_code=200, content={"status": "ignored"})
 
-    message_text, phone = _extract_text_and_phone(payload)
+    message_text, phone, name = _extract_text_phone_and_name(payload)
 
     if not phone or not message_text:
         logger.info("webhook_ignored_no_text_or_phone", webhook_type=payload.type)
         return {"status": "ignored"}
+
+    if START_TRIGGER_PATTERN.match(message_text):
+        logger.info("start_request_received", phone=phone)
+        await _handle_start_request(request.app, phone, name)
+        return {"status": "processed"}
 
     if not TRIGGER_PATTERN.match(message_text):
         logger.info("webhook_ignored_not_trigger", phone=phone)
@@ -127,6 +134,20 @@ async def interakt_webhook(
     logger.info("certificate_request_received", phone=phone)
     await _handle_certificate_request(request.app, phone)
     return {"status": "processed"}
+
+
+async def _handle_start_request(app: FastAPI, phone: str, name: str) -> None:
+    sheets: SheetsService = app.state.sheets_service
+
+    lock = phone_lock_manager.get_lock(phone)
+    async with lock:
+        student = await sheets.find_student(phone)
+        if student is None:
+            await sheets.add_student(phone, name, status="IN_PROGRESS")
+            logger.info("student_started_and_added", phone=phone)
+        else:
+            await sheets.update_student_status(student, status="IN_PROGRESS")
+            logger.info("student_status_updated_to_in_progress", phone=phone)
 
 
 async def _handle_certificate_request(app: FastAPI, phone: str) -> None:

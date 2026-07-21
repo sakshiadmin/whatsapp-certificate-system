@@ -232,3 +232,66 @@ class SheetsService:
             certificate_id=certificate_id,
             row=record.row_number,
         )
+
+    async def add_student(self, phone: str, name: str, status: str = "IN_PROGRESS") -> None:
+        """Adds a new student to the sheet."""
+        def _write() -> None:
+            worksheet = self._connect()
+            header = worksheet.row_values(1)
+            # Create a row with empty strings for all columns
+            new_row = [""] * len(header)
+            
+            # Fill in the columns we know
+            col_map = {
+                "Phone": phone,
+                "Name": name,
+                "Status": status,
+                "Timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            }
+            
+            for col_name, value in col_map.items():
+                if col_name in header:
+                    new_row[header.index(col_name)] = value
+            
+            worksheet.append_row(new_row)
+
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, _write)
+
+        # Force a cache refresh so the new student is available immediately
+        await self._ensure_cache(force=True)
+        
+        logger.info("sheet_added_new_student", phone=phone, name=name, status=status)
+
+    async def update_student_status(self, record: StudentRecord, status: str) -> None:
+        """Updates the status of an existing student."""
+        def _write() -> None:
+            worksheet = self._connect()
+            header = worksheet.row_values(1)
+            updates = []
+            values = {
+                "Status": status,
+                "Timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            }
+            for col_name, value in values.items():
+                if col_name in header:
+                    col_idx = header.index(col_name) + 1  # gspread is 1-indexed
+                    updates.append(
+                        gspread.cell.Cell(row=record.row_number, col=col_idx, value=value)
+                    )
+            worksheet.update_cells(updates)
+
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, _write)
+
+        normalized = normalize_phone(record.phone)
+        cached = self._cache.get(normalized)
+        if cached:
+            cached.status = status
+
+        logger.info(
+            "sheet_updated_student_status",
+            phone=record.phone,
+            status=status,
+            row=record.row_number,
+        )
