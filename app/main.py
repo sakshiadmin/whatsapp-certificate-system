@@ -250,6 +250,8 @@ async def refresh_cache(
 
 @app.post("/webhooks/completion")
 async def completion_webhook(request: Request, payload: CompletionWebhookPayload):
+    logger.info("received_completion_webhook", payload=payload.model_dump())
+    
     sheets: SheetsService = request.app.state.sheets_service
     phone = payload.phone_number
 
