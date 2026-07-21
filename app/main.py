@@ -22,7 +22,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.logging_config import configure_logging, get_logger
-from app.models import InteraktWebhookPayload
+from app.models import InteraktWebhookPayload, CompletionWebhookPayload
 from app.services.certificate_service import (
     generate_certificate_pdf,
     generate_unique_certificate_id,
@@ -246,3 +246,23 @@ async def refresh_cache(
     sheets: SheetsService = request.app.state.sheets_service
     await sheets._ensure_cache(force=True)  # noqa: SLF001
     return {"status": "refreshed", "student_count": len(sheets._cache)}  # noqa: SLF001
+
+
+@app.post("/webhooks/completion")
+async def completion_webhook(request: Request, payload: CompletionWebhookPayload):
+    sheets: SheetsService = request.app.state.sheets_service
+    phone = payload.phone_number
+
+    if payload.message.strip().upper() == "COMPLETED":
+        lock = phone_lock_manager.get_lock(phone)
+        async with lock:
+            student = await sheets.find_student(phone)
+            if student is None:
+                logger.warning("completion_webhook_student_not_found", phone=phone)
+                return JSONResponse(status_code=404, content={"status": "error", "detail": "Student not found"})
+            else:
+                await sheets.update_student_status(student, status="COMPLETED")
+                logger.info("completion_webhook_marked_completed", phone=phone)
+                return {"status": "processed"}
+    else:
+        return {"status": "ignored", "detail": "Message is not COMPLETED"}

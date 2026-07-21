@@ -85,6 +85,13 @@ class InteraktWebhookPayload(BaseModel):
     data: Optional[InteraktWebhookData] = None
 
 
+class CompletionWebhookPayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    phone_number: str
+    name: str
+    message: str
+
 # -----------------------------------------------------------------------------
 # Internal domain models
 # -----------------------------------------------------------------------------
